@@ -7,7 +7,7 @@ use crate::{
         unknown_suffix_oracle,
     },
     convert::{from_base64, from_hex, to_base64},
-    util::{hamming_distance, pad, unpad_in_place}, oracles::{EcbOrCbc, Oracle},
+    util::{hamming_distance, pad}, oracles::{EcbOrCbc, Oracle, UserProfile},
 };
 
 pub fn challenge1() {
@@ -128,7 +128,7 @@ pub fn challenge12() {
             let len = unknown_suffix_oracle(&s).len();
             if len > prev_len {
                 block_size = len - prev_len;
-                message_length = prev_len - s.len() + 1;
+                message_length = prev_len - s.len();
                 break;
             }
             s.push(b'a');
@@ -167,7 +167,6 @@ pub fn challenge12() {
             }
         }
     }
-    unpad_in_place(&mut message);
     let expected = from_base64(
         b"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
 aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
@@ -177,10 +176,19 @@ YnkK",
     assert_eq!(expected, message);
 }
 
-fn challenge13() {
-    // xxx&uid=10&role=
-    // admin&uid=10&rol
+pub fn challenge13() {
+    let mut oracle = UserProfile::new();
+    let mut cipher: Vec<u8> = vec![];
+    // email=xyz@gmail.com&uid=XX&role=
+    cipher.extend(&oracle.query(b"xyz@gmail.com")[..32]);
+    // admin&uid=xx&rol
+    cipher.extend(&oracle.query(b"xyz@gmail.admin")[16..32]);
     // =user
+    cipher.extend(&oracle.query(b"xyzz@gmail.admin")[32..48]);
+    let dict = oracle.parse(&cipher);
+    assert_eq!(dict[&b"email".to_vec()], b"xyz@gmail.com");
+    assert_eq!(dict[&b"role".to_vec()], b"admin");
+    assert_eq!(dict[&b"rolle".to_vec()], b"user");
 }
 
 #[test]
@@ -197,4 +205,5 @@ fn test_challenges() {
     challenge10();
     challenge11();
     challenge12();
+    challenge13();
 }

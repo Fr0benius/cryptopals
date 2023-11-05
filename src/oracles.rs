@@ -1,7 +1,12 @@
+use std::collections::HashMap;
+
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::ciphers::{encrypt_aes_128_cbc, encrypt_aes_128_ecb};
+use crate::{
+    ciphers::{encrypt_aes_128_cbc, encrypt_aes_128_ecb, decrypt_aes_128_ecb},
+    util::{url_encode, parse_cookie},
+};
 
 pub trait Oracle {
     fn query(&mut self, plain: &[u8]) -> Vec<u8>;
@@ -19,11 +24,15 @@ pub struct EcbOrCbc {
 }
 
 impl EcbOrCbc {
-    pub fn new(seed: u64) -> Self{
+    pub fn new(seed: u64) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let mut secret_key = [0; 16];
         rng.fill(&mut secret_key);
-        Self{ is_ecb: false, secret_key, rng}
+        Self {
+            is_ecb: false,
+            secret_key,
+            rng,
+        }
     }
     pub fn is_ecb(&self) -> bool {
         self.is_ecb
@@ -53,3 +62,27 @@ impl Oracle for EcbOrCbc {
     }
 }
 
+pub struct UserProfile {
+    uid: u64,
+    secret_key: [u8; 16],
+}
+
+impl Oracle for UserProfile {
+    fn query(&mut self, email: &[u8]) -> Vec<u8> {
+        let mut plain = b"email=".to_vec();
+        plain.extend_from_slice(&url_encode(email));
+        plain.extend_from_slice(format!("&uid={}&role=user", self.uid).as_bytes());
+        self.uid += 1;
+        encrypt_aes_128_ecb(&plain, &self.secret_key)
+    }
+}
+
+impl UserProfile {
+    pub fn new() -> Self {
+        Self { uid: 10 , secret_key: *b"YELLOW SUBMARINE"}
+    }
+    pub fn parse(&self, encrypted_token: &[u8]) -> HashMap<Vec<u8>, Vec<u8>> {
+        let plain = decrypt_aes_128_ecb(encrypted_token, &self.secret_key);
+        parse_cookie(&plain)
+    }
+}
