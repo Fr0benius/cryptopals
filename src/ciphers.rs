@@ -1,5 +1,4 @@
 use openssl::symm::{Cipher, Crypter, Mode};
-use rand::Rng;
 
 use crate::{
     convert::from_base64,
@@ -153,33 +152,6 @@ pub fn encrypt_aes_128_cbc(s: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     res
 }
 
-/// Oracle for challenge 11.
-/// Adds fuzzing to the text by prefixing and suffixing 5 random bytes
-/// then encrypts it either with CBC or ECB mode, chosen at random.
-/// Uses a secret but consistent key.
-/// Returns the ciphertext and the mode used (true for ECB)
-pub fn encryption_oracle<T: Rng>(s: &[u8], rng: &mut T) -> (Vec<u8>, bool) {
-    let is_ecb: bool = rng.gen();
-    let mut text: Vec<u8> = vec![];
-    let pref: usize = rng.gen_range(5..=10);
-    let suf: usize = rng.gen_range(5..=10);
-    let secret_key = b"GLOTTIS && MANNY";
-    for _ in 0..pref {
-        text.push(rng.gen());
-    }
-    text.extend_from_slice(s);
-    for _ in 0..suf {
-        text.push(rng.gen());
-    }
-    let res = if is_ecb {
-        encrypt_aes_128_ecb(&text, secret_key)
-    } else {
-        let mut iv = [0u8; 16];
-        rng.fill(&mut iv);
-        encrypt_aes_128_cbc(&text, secret_key, &iv)
-    };
-    (res, is_ecb)
-}
 
 /// Oracle for challenge 12.
 /// Adds a constant unknown suffix to the input, then encrypts in ECB mode.

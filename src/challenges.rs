@@ -1,15 +1,13 @@
-use rand::prelude::*;
-use rand_chacha::ChaCha8Rng;
 use std::collections::HashSet;
 
 use crate::{
     ciphers::{
         decrypt_aes_128_cbc, decrypt_aes_128_ecb, decrypt_caesar, encrypt_aes_128_cbc,
-        encryption_oracle, fixed_xor, multiple_decrypt_caesar, repeating_xor,
+        fixed_xor, multiple_decrypt_caesar, repeating_xor,
         unknown_suffix_oracle,
     },
     convert::{from_base64, from_hex, to_base64},
-    util::{hamming_distance, pad, unpad_in_place},
+    util::{hamming_distance, pad, unpad_in_place}, oracles::{EcbOrCbc, Oracle},
 };
 
 pub fn challenge1() {
@@ -110,12 +108,12 @@ pub fn challenge10() {
 }
 
 pub fn challenge11() {
-    let mut rng = ChaCha8Rng::seed_from_u64(12345);
+    let mut oracle = EcbOrCbc::new(12345);
     for _ in 0..10 {
         let plain = vec![b'x'; 64];
-        let (cipher, secret_mode) = encryption_oracle(&plain, &mut rng);
+        let cipher = oracle.query(&plain);
         let is_ecb = cipher[16..32] == cipher[32..48];
-        assert!(secret_mode == is_ecb);
+        assert!(oracle.is_ecb() == is_ecb);
     }
 }
 
@@ -177,6 +175,12 @@ dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
 YnkK",
     );
     assert_eq!(expected, message);
+}
+
+fn challenge13() {
+    // xxx&uid=10&role=
+    // admin&uid=10&rol
+    // =user
 }
 
 #[test]
