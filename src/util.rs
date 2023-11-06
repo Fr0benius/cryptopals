@@ -28,7 +28,9 @@ pub fn unpad_in_place(s: &mut Vec<u8>) {
     let n = s.len();
     assert!(n > 0);
     let pad_length = s[n - 1] as usize;
+    assert!(pad_length > 0);
     assert!(pad_length <= n);
+    assert!(s[n - pad_length + 1..].iter().all(|&c| c == s[n-1]));
     s.truncate(n - pad_length);
 }
 

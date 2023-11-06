@@ -1,7 +1,6 @@
 use openssl::symm::{Cipher, Crypter, Mode};
 
 use crate::{
-    convert::from_base64,
     freq::{dist, load_expected_freq},
     util::{pad, unpad_in_place},
 };
@@ -152,22 +151,6 @@ pub fn encrypt_aes_128_cbc(s: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     res
 }
 
-
-/// Oracle for challenge 12.
-/// Adds a constant unknown suffix to the input, then encrypts in ECB mode.
-/// Uses a secret but consistent key.
-pub fn unknown_suffix_oracle(s: &[u8]) -> Vec<u8> {
-    let unknown = from_base64(
-        b"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
-aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
-dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
-YnkK",
-    );
-    let mut text = s.to_vec();
-    let secret_key = b"MANNY && GLOTTIS";
-    text.extend_from_slice(&unknown);
-    encrypt_aes_128_ecb(&text, secret_key)
-}
 
 #[cfg(test)]
 pub mod tests {

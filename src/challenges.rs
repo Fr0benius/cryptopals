@@ -2,12 +2,12 @@ use std::collections::HashSet;
 
 use crate::{
     ciphers::{
-        decrypt_aes_128_cbc, decrypt_aes_128_ecb, decrypt_caesar, encrypt_aes_128_cbc,
-        fixed_xor, multiple_decrypt_caesar, repeating_xor,
-        unknown_suffix_oracle,
+        decrypt_aes_128_cbc, decrypt_aes_128_ecb, decrypt_caesar, encrypt_aes_128_cbc, fixed_xor,
+        multiple_decrypt_caesar, repeating_xor,
     },
     convert::{from_base64, from_hex, to_base64},
-    util::{hamming_distance, pad}, oracles::{EcbOrCbc, Oracle, UserProfile},
+    oracles::{EcbOrCbc, Oracle, SecretSuffix, UserProfile, solve_secret_suffix},
+    util::{hamming_distance, pad},
 };
 
 pub fn challenge1() {
@@ -117,56 +117,18 @@ pub fn challenge11() {
     }
 }
 
-pub fn challenge12() {
-    // find block size and secret message length
-    let (block_size, message_length) = {
-        let prev_len = unknown_suffix_oracle(&[]).len();
-        let mut s = vec![b'a'];
-        let block_size;
-        let message_length;
-        loop {
-            let len = unknown_suffix_oracle(&s).len();
-            if len > prev_len {
-                block_size = len - prev_len;
-                message_length = prev_len - s.len();
-                break;
-            }
-            s.push(b'a');
-        }
-        (block_size, message_length)
-    };
-    assert_eq!(block_size, 16);
 
+pub fn challenge12() {
+    let mut oracle = SecretSuffix::new();
     // Confirm it's ECB
     {
-        let test_cipher = unknown_suffix_oracle(&vec![b'a'; block_size * 3]);
+        let test_cipher = oracle.query(&[b'a'; 16 * 3]);
         assert_eq!(
-            &test_cipher[..block_size],
-            &test_cipher[block_size..block_size * 2]
+            &test_cipher[..16],
+            &test_cipher[16..16 * 2]
         );
     }
-
-    // Attack!
-    let mut message = vec![0u8; message_length];
-    for k in 0..message_length {
-        let mut test_bytes = if k >= block_size - 1 {
-            message[k - (block_size - 1)..k].to_vec()
-        } else {
-            let mut v = vec![0; block_size - 1 - k];
-            v.extend_from_slice(&message[..k]);
-            v
-        };
-        test_bytes.resize(2 * block_size - 1 - k % block_size, 0);
-        for byte in 0..=255 {
-            test_bytes[block_size - 1] = byte;
-            let cipher = unknown_suffix_oracle(&test_bytes);
-            let block_start = test_bytes.len() + k - (block_size - 1);
-            if cipher[..block_size] == cipher[block_start..block_start + block_size] {
-                message[k] = byte;
-                break;
-            }
-        }
-    }
+    let message = solve_secret_suffix(&mut oracle);
     let expected = from_base64(
         b"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
 aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
@@ -191,6 +153,18 @@ pub fn challenge13() {
     assert_eq!(dict[&b"rolle".to_vec()], b"user");
 }
 
+pub fn challenge14() {
+    let mut oracle = SecretSuffix::with_prefix();
+    let message = solve_secret_suffix(&mut oracle);
+    let expected = from_base64(
+        b"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
+dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
+YnkK",
+    );
+    assert_eq!(expected, message);
+}
+
 #[test]
 fn test_challenges() {
     challenge1();
@@ -206,4 +180,5 @@ fn test_challenges() {
     challenge11();
     challenge12();
     challenge13();
+    challenge14();
 }
