@@ -5,9 +5,11 @@ pub mod ciphers;
 pub mod convert;
 pub mod freq;
 pub mod util;
-pub mod set1;
 pub mod oracles;
 
+pub mod set1;
+pub mod set2;
+
 fn main() {
-    set1::challenge16();
+    set2::challenge16();
 }
