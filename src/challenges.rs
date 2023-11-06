@@ -7,7 +7,7 @@ use crate::{
     },
     convert::{from_base64, from_hex, to_base64},
     oracles::{EcbOrCbc, Oracle, SecretSuffix, UserProfile, solve_secret_suffix},
-    util::{hamming_distance, pad},
+    util::{hamming_distance, pad, unpad},
 };
 
 pub fn challenge1() {
@@ -165,6 +165,35 @@ YnkK",
     assert_eq!(expected, message);
 }
 
+pub fn challenge15() {
+    assert_eq!(unpad(b"ICE ICE BABY\x04\x04\x04\x04"), b"ICE ICE BABY");
+    let res = std::panic::catch_unwind(|| unpad(b"ICE ICE BABY\x05\x05\x05\x05"));
+    assert!(res.is_err());
+}
+
+pub fn challenge16() {
+    let secret_key = b"MANNY && GLOTTIS";
+    let pref = b"comment1=cooking%20MCs;userdata=";
+    let suf = b";comment2=%20like%20a%20pound%20of%20bacon";
+    let wanted = b"xx;role=admin;xx";
+    let plain = {
+        let mut v =pref.to_vec();
+        v.extend_from_slice(&[0; 16]);
+        v.extend_from_slice(suf);
+        v
+    };
+    let mut cipher = encrypt_aes_128_cbc(&plain, secret_key, &[0; 16]);
+    for i in 0..16 {
+        cipher[16 + i] ^= wanted[i];
+    }
+    let hacked_plain = decrypt_aes_128_cbc(&cipher, secret_key, &[0; 16]);
+    for &x in &hacked_plain {
+        print!("{}", x as char);
+    }
+    println!();
+    assert!(hacked_plain.windows(16).any(|w| w == wanted));
+}
+
 #[test]
 fn test_challenges() {
     challenge1();
@@ -181,4 +210,6 @@ fn test_challenges() {
     challenge12();
     challenge13();
     challenge14();
+    challenge15();
+    challenge16();
 }

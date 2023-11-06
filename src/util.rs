@@ -30,7 +30,7 @@ pub fn unpad_in_place(s: &mut Vec<u8>) {
     let pad_length = s[n - 1] as usize;
     assert!(pad_length > 0);
     assert!(pad_length <= n);
-    assert!(s[n - pad_length + 1..].iter().all(|&c| c == s[n-1]));
+    assert!(s[n - pad_length..].iter().all(|&c| c == s[n-1]));
     s.truncate(n - pad_length);
 }
 
@@ -48,6 +48,7 @@ pub fn url_encode(s: &[u8]) -> Vec<u8> {
         match c {
             b'%' => res.extend_from_slice(b"%25"),
             b'&' => res.extend_from_slice(b"%26"),
+            b';' => res.extend_from_slice(b"%3B"),
             b'=' => res.extend_from_slice(b"%3D"),
             _ => res.push(c),
         }
@@ -68,6 +69,7 @@ pub fn url_decode(s: &[u8]) -> Vec<u8> {
             match &s[i + 1..=i + 2] {
                 b"25" => res.push(b'%'),
                 b"26" => res.push(b'&'),
+                b"3B" => res.push(b';'),
                 b"3D" => res.push(b'='),
                 _ => panic!("invalid %-code"),
             }
