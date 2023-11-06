@@ -41,11 +41,12 @@ pub fn unpad(s: &[u8]) -> Vec<u8> {
 }
 
 /// Encodes a byte slice into URL form.
-/// Only treats '?', '=', '%' as special.
+/// Only treats some characters as special.
 pub fn url_encode(s: &[u8]) -> Vec<u8> {
     let mut res = vec![];
     for &c in s {
         match c {
+            b' ' => res.extend_from_slice(b"%20"),
             b'%' => res.extend_from_slice(b"%25"),
             b'&' => res.extend_from_slice(b"%26"),
             b';' => res.extend_from_slice(b"%3B"),
@@ -57,7 +58,7 @@ pub fn url_encode(s: &[u8]) -> Vec<u8> {
 }
 
 /// Decodes a byte slice from URL form.
-/// Only treats '?', '=', '%' as special.
+/// Only treats some characters as special.
 /// Panics on invalid %-code.
 pub fn url_decode(s: &[u8]) -> Vec<u8> {
     let n = s.len();
@@ -67,6 +68,7 @@ pub fn url_decode(s: &[u8]) -> Vec<u8> {
         if s[i] == b'%' {
             assert!(i < n - 1, "invalid %-code");
             match &s[i + 1..=i + 2] {
+                b"20" => res.push(b' '),
                 b"25" => res.push(b'%'),
                 b"26" => res.push(b'&'),
                 b"3B" => res.push(b';'),
@@ -85,9 +87,9 @@ pub fn url_decode(s: &[u8]) -> Vec<u8> {
 /// Parses a key-value cookie string of the form "foo=bar&baz=qux&zap=zazzle"
 /// Returns a map of keys to values.
 /// Keys and values are url-decoded. Panics on decoding error or malformed string.
-pub fn parse_cookie(s: &[u8]) -> HashMap<Vec<u8>, Vec<u8>> {
+pub fn parse_cookie(s: &[u8], separator: u8) -> HashMap<Vec<u8>, Vec<u8>> {
     let mut res = HashMap::new();
-    for kv in s.split(|&c| c == b'&') {
+    for kv in s.split(|&c| c == separator) {
         let kv: Vec<_> = kv.split(|&c| c == b'=').collect();
         assert_eq!(kv.len(), 2, "Each kv-pair must be of the form X=Y");
         res.insert(url_decode(kv[0]), url_decode(kv[1]));
@@ -132,6 +134,6 @@ pub mod tests {
             (b"zap".to_vec(), b"zazzle".to_vec()),
             (b"%&".to_vec(), b"a=b".to_vec()),
         ]);
-        assert_eq!(parse_cookie(cookie), map);
+        assert_eq!(parse_cookie(cookie, b'&'), map);
     }
 }

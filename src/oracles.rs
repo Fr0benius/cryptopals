@@ -198,6 +198,6 @@ impl UserProfile {
     }
     pub fn parse(&self, encrypted_token: &[u8]) -> HashMap<Vec<u8>, Vec<u8>> {
         let plain = decrypt_aes_128_ecb(encrypted_token, &self.secret_key);
-        parse_cookie(&plain)
+        parse_cookie(&plain, b'&')
     }
 }
