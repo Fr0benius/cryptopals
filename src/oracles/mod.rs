@@ -1,13 +1,14 @@
-use std::collections::HashMap;
-
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+pub mod padding_attack;
 
 use crate::{
     ciphers::{decrypt_aes_128_ecb, encrypt_aes_128_cbc, encrypt_aes_128_ecb},
     convert::from_base64,
     util::{parse_cookie, url_encode},
 };
+
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
+use std::collections::HashMap;
 
 pub trait Oracle {
     fn query(&mut self, plain: &[u8]) -> Vec<u8>;
@@ -158,15 +159,13 @@ pub fn solve_secret_suffix(oracle: &mut SecretSuffix) -> Vec<u8> {
             test_bytes.extend_from_slice(&vec![0; block_size - 1 - k]);
             test_bytes.extend_from_slice(&message[..k]);
         };
-        test_bytes.resize(
-            pref_pad_len + 2 * block_size - 1 - k % block_size,
-            0,
-        );
+        test_bytes.resize(pref_pad_len + 2 * block_size - 1 - k % block_size, 0);
         for byte in 0..=255 {
             test_bytes[pref_pad_len + block_size - 1] = byte;
             let cipher = oracle.query(&test_bytes);
             let block_start = prefix_length + test_bytes.len() + k - (block_size - 1);
-            if cipher[offset..offset + block_size] == cipher[block_start..block_start + block_size] {
+            if cipher[offset..offset + block_size] == cipher[block_start..block_start + block_size]
+            {
                 message[k] = byte;
                 break;
             }

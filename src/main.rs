@@ -9,7 +9,8 @@ pub mod oracles;
 
 pub mod set1;
 pub mod set2;
+pub mod set3;
 
 fn main() {
-    set2::challenge16();
+    set3::challenge17();
 }

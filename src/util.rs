@@ -23,14 +23,26 @@ pub fn pad(s: &[u8], block_size: usize) -> Vec<u8> {
     res
 }
 
+/// Find the length of the padding, if valid.
+/// If invalid, return 0;
+pub fn padding_length(s: &[u8]) -> usize {
+    let n = s.len();
+    let pad_length = s[n - 1] as usize;
+    if pad_length == 0 || pad_length > n {
+        return 0;
+    }
+    if !(s[n - pad_length..].iter().all(|&c| c == s[n - 1])) {
+        return 0;
+    }
+    pad_length
+}
+
 /// Inverse PKCS#7 padding
 pub fn unpad_in_place(s: &mut Vec<u8>) {
     let n = s.len();
     assert!(n > 0);
-    let pad_length = s[n - 1] as usize;
-    assert!(pad_length > 0);
-    assert!(pad_length <= n);
-    assert!(s[n - pad_length..].iter().all(|&c| c == s[n-1]));
+    let pad_length = padding_length(s);
+    assert!(pad_length != 0);
     s.truncate(n - pad_length);
 }
 
