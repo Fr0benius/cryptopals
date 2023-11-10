@@ -12,5 +12,5 @@ pub mod set2;
 pub mod set3;
 
 fn main() {
-    set3::challenge17();
+    set3::challenge20();
 }
