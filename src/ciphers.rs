@@ -151,7 +151,48 @@ pub fn encrypt_aes_128_cbc(s: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     res
 }
 
+pub struct CTR {
+    secret_key: [u8; 16],
+    counter: [u8; 16],
+}
 
+impl Iterator for CTR {
+    type Item = [u8; 16];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let res = encrypt_aes_128_block(&self.counter, &self.secret_key);
+        for i in 8..16 {
+            if self.counter[i] < u8::MAX {
+                self.counter[i] += 1;
+                break;
+            }
+            self.counter[i] = 0;
+        }
+        Some(res.try_into().unwrap())
+    }
+}
+
+impl CTR {
+    pub fn new(secret_key: &[u8], nonce: &[u8]) -> Self {
+        let mut counter = [0; 16];
+        counter[..8].copy_from_slice(&nonce[..8]);
+        Self {
+            secret_key: secret_key.try_into().expect("secret key must be 16 bytes"),
+            counter,
+        }
+    }
+}
+
+/// Encrypts a text in ctr mode. Can also be used for decryption.
+/// Requires a 16-byte secret key and an 8-byte nonce.
+pub fn encrypt_aes_128_ctr(cipher: &[u8], secret_key: &[u8], nonce: &[u8]) -> Vec<u8> {
+    let ctr = CTR::new(secret_key, nonce);
+    let mut res = vec![];
+    for (w, k) in cipher.chunks(16).zip(ctr) {
+        res.extend(w.iter().zip(k).map(|(&a, b)| a ^ b));
+    }
+    res
+}
 #[cfg(test)]
 pub mod tests {
     use crate::convert::from_base64;
