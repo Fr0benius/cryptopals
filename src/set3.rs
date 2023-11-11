@@ -1,7 +1,7 @@
 use crate::{
-    ciphers::{encrypt_aes_128_ctr, decrypt_vigenere_fixed},
+    ciphers::{decrypt_vigenere_fixed, encrypt_aes_128_ctr},
     convert::from_base64,
-    oracles::padding_attack::{attack, PadAttackServer},
+    oracles::padding_attack::{attack, PadAttackServer}, mersenne::MT19937,
 };
 
 pub fn challenge17() {
@@ -34,8 +34,7 @@ pub fn challenge19() {
 }
 
 pub fn challenge20() {
-    let data: Vec<Vec<u8>> = 
-        include_str!("../data/challenge20.txt")
+    let data: Vec<Vec<u8>> = include_str!("../data/challenge20.txt")
         .lines()
         .map(|line| from_base64(line.as_bytes()))
         .collect();
@@ -50,18 +49,29 @@ pub fn challenge20() {
         // The first character needs a little tweaking
         w[0] ^= b'n' ^ b'I';
     }
-    let res: Vec<u8> = 
-        include_str!("../data/challenge20out.txt")
+    let res: Vec<u8> = include_str!("../data/challenge20out.txt")
         .bytes()
         .filter(|&c| c != b'\n')
         .collect();
     assert_eq!(&decrypted, &res);
 }
 
+pub fn challenge21() {
+    let rng = MT19937::new(1234);
+    let nums: Vec<_> = rng.take(10).collect();
+    assert_eq!(
+        &nums,
+        &[
+            467891853, 2399847013, 2482137157, 3512589365, 2895582026, 2265913763, 3373089432,
+            3312965625, 3349970575, 1855041653
+        ]
+    );
+}
 #[test]
 fn test_challenges() {
     challenge17();
     challenge18();
     challenge19();
     challenge20();
+    challenge21();
 }
