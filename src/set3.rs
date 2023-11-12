@@ -1,7 +1,10 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use crate::{
     ciphers::{decrypt_vigenere_fixed, encrypt_aes_128_ctr},
     convert::from_base64,
-    oracles::padding_attack::{attack, PadAttackServer}, mersenne::MT19937,
+    mersenne::MT19937,
+    oracles::padding_attack::{attack, PadAttackServer},
 };
 
 pub fn challenge17() {
@@ -67,6 +70,36 @@ pub fn challenge21() {
         ]
     );
 }
+
+pub fn challenge22() {
+    let mut rng = MT19937::new(1234);
+    let offset = (rng.next().unwrap() % 960 + 40) as u64;
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        - offset;
+    let mut rng = MT19937::new(seed as u32);
+    let n = rng.next().unwrap();
+    let hacked_seed = {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut seed = 0;
+        for o in 0..2000 {
+            seed = now - o;
+            let mut rng = MT19937::new(seed as u32);
+            let m = rng.next().unwrap();
+            if n == m {
+                break;
+            }
+        }
+        seed
+    };
+    assert_eq!(hacked_seed, seed);
+}
+
 #[test]
 fn test_challenges() {
     challenge17();
@@ -74,4 +107,5 @@ fn test_challenges() {
     challenge19();
     challenge20();
     challenge21();
+    challenge22();
 }
