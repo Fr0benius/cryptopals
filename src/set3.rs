@@ -1,9 +1,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
-    ciphers::{decrypt_vigenere_fixed, encrypt_aes_128_ctr},
+    ciphers::{decrypt_vigenere_fixed, encrypt_aes_128_ctr, mt19937_stream_cipher},
     convert::from_base64,
-    mersenne::MT19937,
+    mersenne::{untemper, MT19937},
     oracles::padding_attack::{attack, PadAttackServer},
 };
 
@@ -100,6 +100,35 @@ pub fn challenge22() {
     assert_eq!(hacked_seed, seed);
 }
 
+pub fn challenge23() {
+    let mut rng = MT19937::new(1234);
+    let mut state = [0; 624];
+    for x in &mut state {
+        *x = untemper(rng.next().unwrap());
+    }
+    let mut cloned_rng = MT19937::from_state(state);
+    for _ in 0..10 {
+        assert_eq!(rng.next(), cloned_rng.next());
+    }
+}
+
+pub fn challenge24() {
+    let mut plain = b"Blargh!".to_vec();
+    plain.extend_from_slice(&[b'A'; 14]);
+    let cipher = mt19937_stream_cipher(&plain, 1234);
+    let n = cipher.len();
+    let test_plain = vec![b'A'; n];
+    let mut key = 0;
+    for test_key in 0..=u16::MAX {
+        let test_cipher = mt19937_stream_cipher(&test_plain, test_key as u32);
+        if cipher[n-14..] == test_cipher[n-14..] {
+            key = test_key;
+            break;
+        }
+    }
+    assert_eq!(key, 1234);
+}
+
 #[test]
 fn test_challenges() {
     challenge17();
@@ -108,4 +137,6 @@ fn test_challenges() {
     challenge20();
     challenge21();
     challenge22();
+    challenge23();
+    challenge24();
 }

@@ -2,7 +2,7 @@ use openssl::symm::{Cipher, Crypter, Mode};
 
 use crate::{
     freq::{dist, load_expected_freq},
-    util::{pad, unpad_in_place},
+    util::{pad, unpad_in_place}, mersenne::MT19937,
 };
 
 /// Returns the xor of equal-length slices 'a' and 'b'.
@@ -185,14 +185,26 @@ impl CTR {
 
 /// Encrypts a text in ctr mode. Can also be used for decryption.
 /// Requires a 16-byte secret key and an 8-byte nonce.
-pub fn encrypt_aes_128_ctr(cipher: &[u8], secret_key: &[u8], nonce: &[u8]) -> Vec<u8> {
+pub fn encrypt_aes_128_ctr(text: &[u8], secret_key: &[u8], nonce: &[u8]) -> Vec<u8> {
     let ctr = CTR::new(secret_key, nonce);
     let mut res = vec![];
-    for (w, k) in cipher.chunks(16).zip(ctr) {
+    for (w, k) in text.chunks(16).zip(ctr) {
         res.extend(w.iter().zip(k).map(|(&a, b)| a ^ b));
     }
     res
 }
+
+pub fn mt19937_stream_cipher(text: &[u8], secret_key: u32) -> Vec<u8> {
+    let ctr = MT19937::new(secret_key);
+    let mut res = vec![];
+    for (w, k) in text.chunks(4).zip(ctr) {
+        for (i, &x) in w.iter().enumerate() {
+            res.push(x ^ (k >> (8 * i)) as u8);
+        }
+    }
+    res
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::convert::from_base64;
