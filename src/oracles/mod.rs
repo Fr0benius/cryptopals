@@ -1,4 +1,5 @@
 pub mod padding_attack;
+pub mod ra_ctr;
 
 use crate::{
     ciphers::{decrypt_aes_128_ecb, encrypt_aes_128_cbc, encrypt_aes_128_ecb},

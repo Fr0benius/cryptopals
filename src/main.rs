@@ -6,17 +6,13 @@ pub mod convert;
 pub mod freq;
 pub mod util;
 pub mod oracles;
+pub mod mersenne;
 
 pub mod set1;
 pub mod set2;
 pub mod set3;
-pub mod mersenne;
+pub mod set4;
 
 fn main() {
-    // set3::challenge20();
-    let rng = mersenne::MT19937::new(1234);
-    for k in rng.take(10) {
-        println!("{}", k);
-    }
-    println!("{}", u32::MAX);
+    set4::challenge27();
 }
