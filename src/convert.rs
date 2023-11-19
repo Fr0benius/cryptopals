@@ -19,6 +19,10 @@ fn num_to_hex(n: u8) -> char {
     }
 }
 
+fn byte_to_hex(n: u8) -> [char; 2] {
+    [num_to_hex(n >> 4), num_to_hex(n & 0xF)]
+}
+
 pub fn from_hex(hex: &str) -> Vec<u8> {
     assert!(hex.len() % 2 == 0, "Hex string must have even length");
     let mut res = Vec::with_capacity(hex.len() / 2);
@@ -29,7 +33,10 @@ pub fn from_hex(hex: &str) -> Vec<u8> {
 }
 
 pub fn to_hex(bstr: &[u8]) -> String {
-    bstr.iter().copied().map(num_to_hex).collect()
+    bstr.iter()
+        .copied()
+        .flat_map(byte_to_hex)
+        .collect()
 }
 
 //// Converts a number in the range [0, 64) to a b64 character

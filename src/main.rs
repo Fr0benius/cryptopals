@@ -1,5 +1,6 @@
 #![allow(clippy::approx_constant)]
 #![allow(clippy::new_without_default)]
+#![allow(clippy::needless_range_loop)]
 
 pub mod ciphers;
 pub mod convert;
@@ -7,6 +8,7 @@ pub mod freq;
 pub mod util;
 pub mod oracles;
 pub mod mersenne;
+pub mod mac;
 
 pub mod set1;
 pub mod set2;
