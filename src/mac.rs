@@ -6,7 +6,6 @@ pub fn sha1(msg: &[u8]) -> [u8; 20] {
         s.push(0x80);
         let rem = (2 * 64 - 8 - s.len() % 64) % 64;
         s.resize(s.len() + rem, 0);
-        assert_eq!(s.len() % 64, 56);
         s.extend_from_slice(&ml.to_be_bytes());
         assert_eq!(s.len() % 64, 0);
     }
@@ -16,7 +15,7 @@ pub fn sha1(msg: &[u8]) -> [u8; 20] {
     let mut h3 = 0x10325476u32;
     let mut h4 = 0xC3D2E1F0u32;
     let mut w = [0u32; 80];
-    for chunk in s.chunks_mut(64) {
+    for chunk in s.chunks(64) {
         for i in 0..16 {
             w[i] = u32::from_be_bytes(chunk[i * 4..(i + 1) * 4].try_into().unwrap());
         }
