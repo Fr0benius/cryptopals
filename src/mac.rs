@@ -1,19 +1,47 @@
 pub fn sha1(msg: &[u8]) -> [u8; 20] {
+    let s = pad_with_length(msg, msg.len() * 8);
+    sha1_with_parameters(
+        &s,
+        0x67452301u32,
+        0xEFCDAB89u32,
+        0x98BADCFEu32,
+        0x10325476u32,
+        0xC3D2E1F0u32,
+    )
+}
+
+/// Takes the SHA1 hash of a message and computes the SHA1 of the same message, extended with extra
+/// characters after the message and padding.
+/// Requires knowing the total length of the combined message
+/// (original message + padding + suffix)
+pub fn extend_sha1(hash: &[u8], suffix: &[u8], total_len: usize) -> [u8; 20] {
+    assert_eq!(hash.len(), 20);
+    let s = pad_with_length(suffix, total_len * 8);
+    let h0 = u32::from_be_bytes(hash[0..4].try_into().unwrap());
+    let h1 = u32::from_be_bytes(hash[4..8].try_into().unwrap());
+    let h2 = u32::from_be_bytes(hash[8..12].try_into().unwrap());
+    let h3 = u32::from_be_bytes(hash[12..16].try_into().unwrap());
+    let h4 = u32::from_be_bytes(hash[16..20].try_into().unwrap());
+    sha1_with_parameters(&s, h0, h1, h2, h3, h4)
+}
+
+pub fn pad_with_length(msg: &[u8], ml: usize) -> Vec<u8> {
     let mut s = msg.to_vec();
-    // Preprocessing
-    {
-        let ml = msg.len() * 8;
-        s.push(0x80);
-        let rem = (2 * 64 - 8 - s.len() % 64) % 64;
-        s.resize(s.len() + rem, 0);
-        s.extend_from_slice(&ml.to_be_bytes());
-        assert_eq!(s.len() % 64, 0);
-    }
-    let mut h0 = 0x67452301u32;
-    let mut h1 = 0xEFCDAB89u32;
-    let mut h2 = 0x98BADCFEu32;
-    let mut h3 = 0x10325476u32;
-    let mut h4 = 0xC3D2E1F0u32;
+    s.push(0x80);
+    let rem = (2 * 64 - 8 - s.len() % 64) % 64;
+    s.resize(s.len() + rem, 0);
+    s.extend_from_slice(&ml.to_be_bytes());
+    assert_eq!(s.len() % 64, 0);
+    s
+}
+fn sha1_with_parameters(
+    s: &[u8],
+    mut h0: u32,
+    mut h1: u32,
+    mut h2: u32,
+    mut h3: u32,
+    mut h4: u32,
+) -> [u8; 20] {
     let mut w = [0u32; 80];
     for chunk in s.chunks(64) {
         for i in 0..16 {
@@ -63,6 +91,16 @@ pub fn sha1(msg: &[u8]) -> [u8; 20] {
     res
 }
 
+pub fn generate_mac(msg: &[u8], key: &[u8]) -> [u8; 20] {
+    let mut s = key.to_vec();
+    s.extend_from_slice(msg);
+    sha1(&s)
+}
+
+pub fn verify_mac(msg: &[u8], key: &[u8], mac: &[u8]) -> bool {
+    generate_mac(msg, key) == mac
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::convert::to_hex;
@@ -83,5 +121,20 @@ pub mod tests {
             to_hex(&sha1(b"")),
             "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709"
         );
+    }
+    #[test]
+    fn test_extend_sha1() {
+        let orig_message = b"The quick brown fox";
+        let orig_hash = sha1(orig_message);
+
+        let padded_orig = pad_with_length(orig_message, orig_message.len() * 8);
+        let suffix = b" the lazy dog";
+        let combined = {
+            let mut s = padded_orig.clone();
+            s.extend_from_slice(suffix);
+            s
+        };
+        let extended_hash = extend_sha1(&orig_hash, suffix, combined.len());
+        assert_eq!(extended_hash, sha1(&combined));
     }
 }

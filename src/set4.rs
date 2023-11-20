@@ -1,5 +1,6 @@
 use crate::{
     ciphers::{decrypt_aes_128_cbc, encrypt_aes_128_cbc, encrypt_aes_128_ctr, fixed_xor},
+    mac::{extend_sha1, generate_mac, pad_with_length, sha1, verify_mac},
     oracles::ra_ctr::RandomAccessCTR,
     util::parse_cookie,
 };
@@ -49,9 +50,40 @@ pub fn challenge27() {
     assert_eq!(&cracked_key, secret_key);
 }
 
+pub fn challenge28() {
+    let secret_key = b"MANNY && GLOTTIS";
+    let message = b"Run, pigeons, it's Robert Frost!";
+    let mac = generate_mac(message, secret_key);
+    assert!(verify_mac(message, secret_key, &mac));
+}
+
+pub fn challenge29() {
+    let secret_key = b"potato";
+    let orig = b"comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon";
+    let orig_mac = generate_mac(orig, secret_key);
+    let guessed_key_len = secret_key.len();
+    let suffix = b";admin=true";
+    let forged_message = {
+        let mut msg = vec![0; guessed_key_len];
+        msg.extend_from_slice(orig);
+        let mut s = pad_with_length(&msg, msg.len() * 8);
+        s.extend_from_slice(suffix);
+        s[guessed_key_len..].to_vec()
+    };
+    let forged_mac = extend_sha1(
+        &orig_mac,
+        suffix,
+        guessed_key_len + forged_message.len(),
+    );
+
+    assert_eq!(forged_mac, generate_mac(&forged_message, secret_key));
+}
+
 #[test]
 fn test_challenges() {
     challenge25();
     challenge26();
     challenge27();
+    challenge28();
+    challenge29();
 }
