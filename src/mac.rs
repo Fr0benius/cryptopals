@@ -34,6 +34,7 @@ pub fn pad_with_length(msg: &[u8], ml: usize) -> Vec<u8> {
     assert_eq!(s.len() % 64, 0);
     s
 }
+
 fn sha1_with_parameters(
     s: &[u8],
     mut h0: u32,
@@ -91,14 +92,14 @@ fn sha1_with_parameters(
     res
 }
 
-pub fn generate_mac(msg: &[u8], key: &[u8]) -> [u8; 20] {
+pub fn generate_sha1_mac(msg: &[u8], key: &[u8]) -> [u8; 20] {
     let mut s = key.to_vec();
     s.extend_from_slice(msg);
     sha1(&s)
 }
 
-pub fn verify_mac(msg: &[u8], key: &[u8], mac: &[u8]) -> bool {
-    generate_mac(msg, key) == mac
+pub fn verify_sha1_mac(msg: &[u8], key: &[u8], mac: &[u8]) -> bool {
+    generate_sha1_mac(msg, key) == mac
 }
 
 #[cfg(test)]
