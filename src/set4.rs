@@ -1,7 +1,10 @@
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+
 use crate::{
     ciphers::{decrypt_aes_128_cbc, encrypt_aes_128_cbc, encrypt_aes_128_ctr, fixed_xor},
-    mac::{extend_sha1, generate_sha1_mac, pad_with_length, verify_sha1_mac, generate_md4_mac, extend_md4},
-    oracles::ra_ctr::RandomAccessCTR,
+    mac::{extend_sha1, generate_sha1_mac, pad_with_length, verify_sha1_mac, generate_md4_mac, extend_md4, generate_sha1_hmac},
+    oracles::{ra_ctr::RandomAccessCTR, timing_attack},
     util::parse_cookie,
 };
 
@@ -93,6 +96,67 @@ pub fn challenge30() {
     assert_eq!(forged_mac, generate_md4_mac(&forged_message, secret_key));
 }
 
+pub fn challenge31() {
+    let secret_key = b"hunter2";
+    let file_name = b"potato.txt";
+    let secret_hmac = generate_sha1_hmac(file_name, secret_key);
+    let mut guess = [0u8; 20];
+    let rng = ChaCha8Rng::seed_from_u64(98765);
+    let mut server = timing_attack::Server::new(rng, 50000, 1000);
+    for i in 0..20 {
+        let mut best_char = 0u8;
+        let mut best_time = 0;
+        for c in 0..=255 {
+            guess[i] = c;
+            let (good, time) = server.insecure_compare(&guess, &secret_hmac);
+            if good {
+                best_char = c;
+                break;
+            }
+            if time > best_time {
+                best_char = c;
+                best_time = time;
+            }
+        }
+        guess[i] = best_char;
+    }
+    assert_eq!(guess, secret_hmac);
+}
+
+pub fn challenge32() {
+    let secret_key = b"hunter2";
+    let file_name = b"potato.txt";
+    let secret_hmac = generate_sha1_hmac(file_name, secret_key);
+    let mut guess = [0u8; 20];
+    let rng = ChaCha8Rng::seed_from_u64(98765);
+    let mut server = timing_attack::Server::new(rng, 5000, 1000);
+    for i in 0..20 {
+        let mut best_char = 0u8;
+        let mut best_time = 0;
+        for c in 0..=255 {
+            guess[i] = c;
+            // When there is more relative noise, use more samples
+            let mut good = false;
+            let mut time = 0;
+            for _ in 0..5 {
+                let (g, t) = server.insecure_compare(&guess, &secret_hmac);
+                good = g;
+                time += t;
+            }
+            if good {
+                best_char = c;
+                break;
+            }
+            if time > best_time {
+                best_char = c;
+                best_time = time;
+            }
+        }
+        guess[i] = best_char;
+    }
+    assert_eq!(guess, secret_hmac);
+}
+
 #[test]
 fn test_challenges() {
     challenge25();
@@ -101,4 +165,7 @@ fn test_challenges() {
     challenge28();
     challenge29();
     challenge30();
+    challenge31();
+    challenge32();
 }
+

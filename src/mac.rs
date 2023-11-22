@@ -226,10 +226,34 @@ fn md4_with_parameters(s: &[u8], mut h0: u32, mut h1: u32, mut h2: u32, mut h3: 
     res
 }
 
+/// Prefix MAC - hash(key + message)
 pub fn generate_sha1_mac(msg: &[u8], key: &[u8]) -> [u8; 20] {
     let mut s = key.to_vec();
     s.extend_from_slice(msg);
     sha1(&s)
+}
+
+pub fn generate_sha1_hmac(msg: &[u8], key: &[u8]) -> [u8; 20] {
+    let block_key = {
+        let mut s = if key.len() > 64 {
+            sha1(key).to_vec()
+        } else {
+            key.to_vec()
+        };
+        s.resize(64, 0u8);
+        s
+    };
+    let inner: Vec<u8> = block_key
+        .iter()
+        .map(|&c| c ^ 0x36)
+        .chain(msg.iter().copied())
+        .collect();
+    let outer: Vec<u8> = block_key
+        .iter()
+        .map(|&c| c ^ 0x5c)
+        .chain(sha1(&inner))
+        .collect();
+    sha1(&outer)
 }
 
 pub fn verify_sha1_mac(msg: &[u8], key: &[u8], mac: &[u8]) -> bool {
