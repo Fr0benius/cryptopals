@@ -58,6 +58,7 @@ pub fn challenge6() {
             best_score = score;
         }
     }
+    assert_eq!(best_keysize, 29);
     let (plain, _) = crate::ciphers::decrypt_vigenere_fixed(&cipher, best_keysize);
     assert_eq!(plain, expected);
 }

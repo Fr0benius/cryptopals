@@ -217,6 +217,11 @@ pub mod tests {
         let text = from_base64(raw_data.as_bytes());
         let expected = include_str!("../data/funky_music.txt");
         let (decrypted, _) = decrypt_vigenere_fixed(&text, 29);
+        let secret_key: String = 
+            (0..29)
+            .map(|i| (text[i] ^ decrypted[i]) as char)
+            .collect();
+        assert_eq!(&secret_key, "Terminator X: Bring the noise");
         assert_eq!(decrypted, expected.as_bytes());
     }
 }
